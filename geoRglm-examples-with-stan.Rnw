@@ -1,0 +1,95 @@
+\documentclass{article}
+
+\begin{document}
+
+\title{geoRglm Examples with Stan}
+\author{Eric Brown}
+\maketitle
+
+<<knitr, echo=FALSE, results='hide', error=TRUE, warning=TRUE, message=FALSE>>=
+#update.packages(ask=FALSE)
+if(!(require(knitr))){install.packages('knitr', dependencies=TRUE); require(knitr)}
+cache.path <- file.path(getwd(), 'cache/')
+opts_chunk$set(cache.path=cache.path)
+fig.path <- file.path(getwd(), 'figures/figure-')
+opts_chunk$set(fig.path=fig.path)
+@
+
+<<packages, echo=FALSE, results='hide', error=TRUE, warning=TRUE, message=FALSE>>=
+if(!(require(geoR))){install.packages('geoR', dependencies=TRUE); require(geoR)}
+if(!(require(geoRglm))){install.packages('geoRglm', dependencies=TRUE); require(geoRglm)}
+if(!(require(ggplot2))){install.packages('ggplot2', dependencies=TRUE); require(ggplot2)}
+if(!(require(inline))){install.packages('inline', dependencies=TRUE); require(inline)}
+if(!(require(Rcpp))){install.packages('Rcpp', dependencies=TRUE); require(Rcpp)}
+if(!(require(rstan))){
+  Sys.setenv(R_MAKEVARS_USER='')
+  options(repos=c(getOption('repos'), rstan='http://wiki.stan.googlecode.com/git/R'))
+  install.packages('rstan', type='source')
+  require(rstan)
+}
+if(!require(filehash)){install.packages('filehash', dependencies=TRUE); require(filehash)}
+if(!require(tikzDevice)){install.packages('tikzDevice', repos='http://R-Forge.R-project.org'); require(tikzDevice)}
+if(!(require(xtable))){install.packages('xtable', dependencies=TRUE); require(xtable)}
+@
+
+<<data>>=
+data(s100)
+data(p50)
+data(b50)
+@
+
+<<p50, cache=TRUE>>=
+model_code <- '
+data {
+  int<lower=1> N;
+  vector[N] X;
+  vector[N] Y;
+  int<lower=0> y[N];
+}
+transformed data {
+  matrix[N,N] D;
+  vector[N] zeros;
+  for(i in 1:N) {
+    for(j in 1:N) {
+      if( i == j ) {
+        D[i,j] <- 0.0;
+      } else {
+        D[i,j] <- sqrt( pow(X[i]-X[j], 2.0) + pow(Y[i]-Y[j], 2.0) );
+      }
+    }
+  }
+  for(i in 1:N) {
+    zeros[i] <- 0.0;
+  }
+}
+parameters {
+  real beta;
+  real<lower=0> sigmasq;
+  real<lower=0> phi;
+  vector[N] zeta;
+}
+transformed parameters {
+}
+model {
+  matrix[N,N] Sigma;
+  beta    ~ normal(0,100);
+  sigmasq ~ inv_gamma(2.0,1.0);
+  phi     ~ inv_gamma(0.5,0.5);
+  Sigma  <- sigmasq * exp(-D/phi);
+  zeta    ~ multi_normal(zeros, Sigma);
+  y       ~ poisson(exp(beta+zeta));
+}
+generated quantities{
+}
+'
+data <- list(
+  N=nrow(p50$coord),
+  X=p50$coord[,1],
+  Y=p50$coord[,2],
+  y=p50$data
+  )
+fit <- stan(model_code=model_code, data=data, iter=1000, thin=1, chains=1, seed=1, init=function(x){list(beta=1.0,sigmasq=1.0,phi=1.0,zeta=rep(0,nrow(p50$coord)))}, nondiag_mass=TRUE)
+fit
+@
+
+\end{document}

@@ -1,0 +1,166 @@
+\documentclass{article}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+
+\begin{document}
+
+\title{geoRglm Examples with Stan}
+\author{Eric Brown}
+\maketitle
+
+
+
+
+
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{data}\hlstd{(s100)}
+\hlkwd{data}\hlstd{(p50)}
+\hlkwd{data}\hlstd{(b50)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{model_code} \hlkwb{<-} \hlstr{"\textbackslash{}ndata \{\textbackslash{}n  int<lower=1> N;\textbackslash{}n  vector[N] X;\textbackslash{}n  vector[N] Y;\textbackslash{}n  int<lower=0> y[N];\textbackslash{}n\}\textbackslash{}ntransformed data \{\textbackslash{}n  matrix[N,N] D;\textbackslash{}n  vector[N] zeros;\textbackslash{}n  for(i in 1:N) \{\textbackslash{}n    for(j in 1:N) \{\textbackslash{}n      if( i == j ) \{\textbackslash{}n        D[i,j] <- 0.0;\textbackslash{}n      \} else \{\textbackslash{}n        D[i,j] <- sqrt( pow(X[i]-X[j], 2.0) + pow(Y[i]-Y[j], 2.0) );\textbackslash{}n      \}\textbackslash{}n    \}\textbackslash{}n  \}\textbackslash{}n  for(i in 1:N) \{\textbackslash{}n    zeros[i] <- 0.0;\textbackslash{}n  \}\textbackslash{}n\}\textbackslash{}nparameters \{\textbackslash{}n  real beta;\textbackslash{}n  real<lower=0> sigmasq;\textbackslash{}n  real<lower=0> phi;\textbackslash{}n  vector[N] zeta;\textbackslash{}n\}\textbackslash{}ntransformed parameters \{\textbackslash{}n\}\textbackslash{}nmodel \{\textbackslash{}n  matrix[N,N] Sigma;\textbackslash{}n  beta    ~ normal(0,100);\textbackslash{}n  sigmasq ~ inv_gamma(2.0,1.0);\textbackslash{}n  phi     ~ inv_gamma(0.5,0.5);\textbackslash{}n  Sigma  <- sigmasq * exp(-D/phi);\textbackslash{}n  zeta    ~ multi_normal(zeros, Sigma);\textbackslash{}n  y       ~ poisson(exp(beta+zeta));\textbackslash{}n\}\textbackslash{}ngenerated quantities\{\textbackslash{}n\}\textbackslash{}n"}
+\hlstd{data} \hlkwb{<-} \hlkwd{list}\hlstd{(}\hlkwc{N} \hlstd{=} \hlkwd{nrow}\hlstd{(p50}\hlopt{$}\hlstd{coord),} \hlkwc{X} \hlstd{= p50}\hlopt{$}\hlstd{coord[,} \hlnum{1}\hlstd{],} \hlkwc{Y} \hlstd{= p50}\hlopt{$}\hlstd{coord[,} \hlnum{2}\hlstd{],} \hlkwc{y} \hlstd{= p50}\hlopt{$}\hlstd{data)}
+\hlstd{fit} \hlkwb{<-} \hlkwd{stan}\hlstd{(}\hlkwc{model_code} \hlstd{= model_code,} \hlkwc{data} \hlstd{= data,} \hlkwc{iter} \hlstd{=} \hlnum{1000}\hlstd{,} \hlkwc{thin} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{chains} \hlstd{=} \hlnum{1}\hlstd{,}
+    \hlkwc{seed} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{init} \hlstd{=} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) \{}
+        \hlkwd{list}\hlstd{(}\hlkwc{beta} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{sigmasq} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{phi} \hlstd{=} \hlnum{1}\hlstd{,} \hlkwc{zeta} \hlstd{=} \hlkwd{rep}\hlstd{(}\hlnum{0}\hlstd{,} \hlkwd{nrow}\hlstd{(p50}\hlopt{$}\hlstd{coord)))}
+    \hlstd{\},} \hlkwc{nondiag_mass} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## 
+## TRANSLATING MODEL 'model_code' FROM Stan CODE TO C++ CODE NOW.
+## COMPILING THE C++ CODE FOR MODEL 'model_code' NOW.
+## SAMPLING FOR MODEL 'model_code' NOW (CHAIN 1).
+## Iteration:   1 / 1000 [  0%]  (Adapting)Iteration: 100 / 1000 [ 10%]  (Adapting)Iteration: 200 / 1000 [ 20%]  (Adapting)Iteration: 300 / 1000 [ 30%]  (Adapting)Iteration: 400 / 1000 [ 40%]  (Adapting)Iteration: 500 / 1000 [ 50%]  (Adapting)Iteration: 600 / 1000 [ 60%]  (Sampling)Iteration: 700 / 1000 [ 70%]  (Sampling)Iteration: 800 / 1000 [ 80%]  (Sampling)Iteration: 900 / 1000 [ 90%]  (Sampling)Iteration: 1000 / 1000 [100%]  (Sampling)
+\end{verbatim}
+\begin{alltt}
+\hlstd{fit}
+\end{alltt}
+\begin{verbatim}
+## Inference for Stan model: model_code.
+## 1 chains, each with iter=1000; warmup=500; thin=1; 
+## post-warmup draws per chain=500, total post-warmup draws=500.
+## 
+##           mean se_mean  sd  2.5%   25%   50%   75% 97.5% n_eff Rhat
+## beta       1.2     0.0 0.2   0.8   1.0   1.2   1.3   1.5   500    1
+## sigmasq    0.8     0.0 0.2   0.4   0.6   0.7   0.9   1.3   198    1
+## phi        0.4     0.0 0.2   0.1   0.3   0.3   0.5   0.9   389    1
+## zeta[1]    0.3     0.0 0.5  -0.6   0.0   0.3   0.6   1.1   500    1
+## zeta[2]   -0.4     0.0 0.5  -1.5  -0.7  -0.4   0.0   0.5   493    1
+## zeta[3]   -0.2     0.0 0.5  -1.1  -0.5  -0.2   0.2   0.8   358    1
+## zeta[4]   -0.7     0.0 0.6  -1.9  -1.2  -0.7  -0.3   0.4   208    1
+## zeta[5]   -1.0     0.0 0.6  -2.2  -1.3  -1.0  -0.6   0.2   398    1
+## zeta[6]   -0.1     0.0 0.5  -1.1  -0.4  -0.1   0.2   0.8   303    1
+## zeta[7]   -0.7     0.0 0.6  -2.0  -1.0  -0.6  -0.3   0.4   374    1
+## zeta[8]   -0.4     0.0 0.5  -1.5  -0.7  -0.3   0.0   0.6   500    1
+## zeta[9]    1.4     0.0 0.3   0.8   1.1   1.4   1.6   2.0   172    1
+## zeta[10]   0.6     0.0 0.4  -0.3   0.4   0.6   0.9   1.5   383    1
+## zeta[11]   1.5     0.0 0.3   0.9   1.3   1.5   1.7   2.2   253    1
+## zeta[12]  -0.7     0.0 0.6  -2.0  -1.1  -0.7  -0.3   0.3   350    1
+## zeta[13]  -1.1     0.0 0.6  -2.3  -1.5  -1.1  -0.6   0.1   390    1
+## zeta[14]  -0.7     0.0 0.6  -1.9  -1.0  -0.6  -0.4   0.4   390    1
+## zeta[15]   0.3     0.0 0.4  -0.6   0.0   0.3   0.6   1.1   311    1
+## zeta[16]   0.5     0.0 0.4  -0.3   0.2   0.5   0.8   1.3   188    1
+## zeta[17]   1.6     0.0 0.3   1.0   1.4   1.6   1.8   2.2   386    1
+## zeta[18]  -0.9     0.0 0.7  -2.2  -1.3  -0.9  -0.5   0.2   500    1
+## zeta[19]  -0.3     0.0 0.5  -1.2  -0.6  -0.3   0.0   0.7   500    1
+## zeta[20]   0.3     0.0 0.4  -0.6   0.1   0.4   0.6   1.2   500    1
+## zeta[21]  -0.1     0.0 0.5  -1.0  -0.4   0.0   0.3   0.8   318    1
+## zeta[22]   0.2     0.0 0.5  -0.7  -0.1   0.2   0.5   1.1   500    1
+## zeta[23]   0.3     0.0 0.4  -0.6   0.0   0.3   0.6   1.1   442    1
+## zeta[24]   0.3     0.0 0.4  -0.6   0.0   0.3   0.6   1.1   297    1
+## zeta[25]   1.5     0.0 0.3   0.9   1.3   1.5   1.7   2.2   269    1
+## zeta[26]  -0.8     0.0 0.7  -2.3  -1.2  -0.8  -0.4   0.3   344    1
+## zeta[27]   0.3     0.0 0.4  -0.5   0.0   0.3   0.6   1.1   500    1
+## zeta[28]   0.1     0.0 0.4  -0.8  -0.2   0.1   0.3   0.9   387    1
+## zeta[29]   0.8     0.0 0.4   0.0   0.6   0.8   1.1   1.5   184    1
+## zeta[30]   0.6     0.0 0.4  -0.2   0.4   0.6   0.9   1.4   500    1
+## zeta[31]   0.3     0.0 0.4  -0.6   0.0   0.3   0.6   1.1   338    1
+## zeta[32]  -0.3     0.0 0.5  -1.3  -0.7  -0.3   0.1   0.6   303    1
+## zeta[33]  -0.1     0.0 0.5  -1.3  -0.4  -0.1   0.2   0.8   500    1
+## zeta[34]  -0.4     0.0 0.5  -1.4  -0.7  -0.4   0.0   0.5   500    1
+## zeta[35]  -0.6     0.0 0.6  -1.7  -1.0  -0.6  -0.2   0.4   278    1
+## zeta[36]   0.3     0.0 0.5  -0.6   0.0   0.3   0.6   1.2   427    1
+## zeta[37]  -0.4     0.0 0.5  -1.4  -0.6  -0.4   0.0   0.6   434    1
+## zeta[38]  -0.1     0.0 0.5  -1.1  -0.4  -0.1   0.2   0.9   445    1
+## zeta[39]  -0.7     0.0 0.6  -1.8  -1.0  -0.7  -0.3   0.4   395    1
+## zeta[40]  -0.3     0.0 0.5  -1.4  -0.7  -0.4   0.0   0.7   500    1
+## zeta[41]  -0.4     0.0 0.5  -1.3  -0.7  -0.4  -0.1   0.5   326    1
+## zeta[42]   0.7     0.0 0.4  -0.2   0.5   0.7   1.0   1.4   500    1
+## zeta[43]  -0.7     0.0 0.6  -1.7  -1.0  -0.6  -0.3   0.4   242    1
+## zeta[44]  -0.4     0.0 0.5  -1.6  -0.8  -0.4   0.0   0.6   303    1
+## zeta[45]   0.4     0.0 0.4  -0.3   0.1   0.5   0.8   1.2   378    1
+## zeta[46]   1.7     0.0 0.3   1.0   1.5   1.7   1.9   2.3   489    1
+## zeta[47]  -0.9     0.0 0.6  -2.4  -1.3  -0.9  -0.5   0.1   366    1
+## zeta[48]  -0.7     0.0 0.6  -2.0  -1.0  -0.7  -0.2   0.4   500    1
+## zeta[49]  -0.4     0.0 0.6  -1.6  -0.8  -0.4   0.0   0.6   500    1
+## zeta[50]   0.2     0.0 0.5  -0.7   0.0   0.3   0.6   1.1   327    1
+## lp__     177.3     0.6 6.1 165.2 173.4 177.3 181.5 188.7   100    1
+## 
+## Samples were drawn using NUTS(nondiag) at Sat Sep 21 20:29:17 2013.
+## For each parameter, n_eff is a crude measure of effective sample size,
+## and Rhat is the potential scale reduction factor on split chains (at 
+## convergence, Rhat=1).
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+
+\end{document}
